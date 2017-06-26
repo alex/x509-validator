@@ -14,6 +14,8 @@
 - Name constraint not present
 - Signature not correct
 - RSA key too small
+- Unsupported curve
+- Unsupported hash function
 - maximum chain depth
 - Unknown critical extension
 
