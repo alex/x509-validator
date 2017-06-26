@@ -139,7 +139,7 @@ class CAWorkspace(object):
             issuer_name
         )
         for ext in extra_extensions:
-            builder = builder.add_extension(ext, critical=False)
+            builder = builder.add_extension(ext.value, critical=ext.critical)
         cert = builder.sign(
             ca_key, signature_hash_algorithm, default_backend()
         )
@@ -149,8 +149,13 @@ class CAWorkspace(object):
         return self._issue_new_cert(
             issuer=issuer,
             extra_extensions=[
-                x509.BasicConstraints(ca=True, path_length=path_length)
-            ],
+                create_extension(
+                    x509.BasicConstraints(
+                        ca=True, path_length=path_length
+                    ),
+                    critical=True
+                )
+            ] + kwargs.pop("extra_extensions", []),
             **kwargs
         )
 
@@ -179,6 +184,10 @@ def ca_workspace(key_cache):
         yield workspace
     finally:
         key_cache.reset()
+
+
+def create_extension(value, critical):
+    return x509.Extension(value.oid, critical, value)
 
 
 def relative_datetime(td):
@@ -331,3 +340,35 @@ def test_maximum_chain_depth(ca_workspace):
     leaf = ca_workspace.issue_new_leaf(ca)
 
     ca_workspace.assert_doesnt_validate(leaf, extra_certs=intermediates)
+
+
+def test_unsupported_critical_extension_leaf(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    leaf = ca_workspace.issue_new_leaf(root, extra_extensions=[
+        create_extension(
+            x509.UnrecognizedExtension(
+                oid=x509.ObjectIdentifier("1.0"), value=b""
+            ),
+            critical=True
+        )
+    ])
+
+    ca_workspace.assert_doesnt_validate(leaf)
+
+
+def test_unsupported_critical_extension_intermediate(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    intermediate = ca_workspace.issue_new_ca_certificate(
+        root,
+        extra_extensions=[
+            create_extension(
+                x509.UnrecognizedExtension(
+                    oid=x509.ObjectIdentifier("1.0"), value=b""
+                ),
+                critical=True
+            )
+        ]
+    )
+    leaf = ca_workspace.issue_new_leaf(intermediate)
+
+    ca_workspace.assert_doesnt_validate(leaf, extra_certs=[intermediate])

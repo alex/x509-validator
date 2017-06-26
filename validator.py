@@ -26,6 +26,7 @@ class ValidationContext(object):
 
 
 _MAX_CHAIN_DEPTH = 8
+_SUPPORTED_EXTENSIONS = {x509.ExtensionOID.BASIC_CONSTRAINTS}
 
 
 class X509Validator(object):
@@ -51,7 +52,11 @@ class X509Validator(object):
     def _is_valid_cert(self, cert, ctx):
         return (
             cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after and
-            cert.public_key().key_size >= 2048
+            cert.public_key().key_size >= 2048 and
+            all(
+                ext.oid in _SUPPORTED_EXTENSIONS
+                for ext in cert.extensions if ext.critical
+            )
         )
 
     def _is_valid_issuer(self, cert, issuer, depth, ctx):
