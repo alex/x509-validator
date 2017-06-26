@@ -14,7 +14,6 @@
 - Name constraint not present
 - Signature not correct
 - Unsupported curve
-- Unsupported hash function
 - maximum chain depth
 - Unknown critical extension
 

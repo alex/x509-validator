@@ -99,7 +99,8 @@ class CAWorkspace(object):
         assert cert.cert in chain
 
     def _issue_new_cert(self, key=None, issuer=None, not_valid_before=None,
-                        not_valid_after=None, extra_extensions=[]):
+                        not_valid_after=None, signature_hash_algorithm=None,
+                        extra_extensions=[]):
 
         if key is None:
             key = self._key_cache.generate_rsa_key()
@@ -119,6 +120,9 @@ class CAWorkspace(object):
                 datetime.datetime.utcnow() + datetime.timedelta(hours=1)
             )
 
+        if signature_hash_algorithm is None:
+            signature_hash_algorithm = hashes.SHA256()
+
         builder = x509.CertificateBuilder().serial_number(
             1
         ).public_key(
@@ -134,7 +138,7 @@ class CAWorkspace(object):
         )
         for ext in extra_extensions:
             builder = builder.add_extension(ext, critical=False)
-        cert = builder.sign(ca_key, hashes.SHA256(), default_backend())
+        cert = builder.sign(ca_key, signature_hash_algorithm, default_backend())
         return CertificatePair(cert, key)
 
     def _issue_new_ca(self, issuer=None, path_length=None, **kwargs):
@@ -271,3 +275,12 @@ def test_rsa_key_too_small(ca_workspace, key_cache):
     )
 
     ca_workspace.assert_doesnt_validate(leaf)
+
+
+def test_unsupported_signature_hash(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    md5_leaf = ca_workspace.issue_new_leaf(root, signature_hash_algorithm=hashes.MD5())
+    sha1_leaf = ca_workspace.issue_new_leaf(root, signature_hash_algorithm=hashes.SHA1())
+
+    ca_workspace.assert_doesnt_validate(md5_leaf)
+    ca_workspace.assert_doesnt_validate(sha1_leaf)

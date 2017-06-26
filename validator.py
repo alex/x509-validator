@@ -52,13 +52,6 @@ class X509Validator(object):
         )
 
     def _is_valid_issuer(self, cert, issuer, depth, ctx):
-        # TODO:
-        # - name constraints
-        # - key parameter validation
-        # - public_key matches signature type
-        # - maximum chain depth
-        # - valid signature algorithms
-
         if not self._is_valid_cert(issuer, ctx):
             return False
 
@@ -78,6 +71,11 @@ class X509Validator(object):
 
         public_key = issuer.public_key()
         if isinstance(public_key, rsa.RSAPublicKey):
+            if cert.signature_algorithm_oid not in [
+                x509.SignatureAlgorithmOID.RSA_WITH_SHA256
+            ]:
+                return False
+
             try:
                 public_key.verify(
                     cert.signature,
