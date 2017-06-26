@@ -14,7 +14,6 @@
 - Name constraint not present
 - Signature not correct
 - Unsupported curve
-- maximum chain depth
 - Unknown critical extension
 
 # Need to write full test case description for

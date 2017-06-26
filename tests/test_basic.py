@@ -284,3 +284,15 @@ def test_unsupported_signature_hash(ca_workspace):
 
     ca_workspace.assert_doesnt_validate(md5_leaf)
     ca_workspace.assert_doesnt_validate(sha1_leaf)
+
+
+def test_maximum_chain_depth(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    intermediates = []
+    ca = root
+    for _ in range(16):
+        ca = ca_workspace.issue_new_ca_certificate(ca)
+        intermediates.append(ca)
+    leaf = ca_workspace.issue_new_leaf(ca)
+
+    ca_workspace.assert_doesnt_validate(leaf, extra_certs=intermediates)

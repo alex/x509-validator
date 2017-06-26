@@ -25,6 +25,8 @@ class ValidationContext(object):
         self._extra_certs_by_name = _build_name_mapping(extra_certs)
 
 
+_MAX_CHAIN_DEPTH = 8
+
 class X509Validator(object):
     def __init__(self, roots):
         self._roots = roots
@@ -90,6 +92,8 @@ class X509Validator(object):
         return True
 
     def _build_chain_from(self, cert, ctx, depth):
+        if depth > _MAX_CHAIN_DEPTH:
+            return
         if cert in self._roots:
             yield [cert]
             return
