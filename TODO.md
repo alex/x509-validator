@@ -1,6 +1,5 @@
 # Success
 
-- Cert, with extra intermediate, to root
 - Name constraint in permitted
 - P256
 - P384
