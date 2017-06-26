@@ -150,9 +150,12 @@ class CAWorkspace(object):
             **kwargs
         )
 
+    def add_trusted_root(self, cert):
+        self._roots.append(cert.cert)
+
     def issue_new_trusted_root(self, **kwargs):
         certpair = self._issue_new_ca(**kwargs)
-        self._roots.append(certpair.cert)
+        self.add_trusted_root(certpair)
         return certpair
 
     def issue_new_ca_certificate(self, ca):
@@ -209,6 +212,11 @@ def test_ca_true_required(ca_workspace):
 
     ca_workspace.assert_validates(cert)
     ca_workspace.assert_doesnt_validate(untrusted, extra_certs=[cert])
+
+    root = ca_workspace.issue_new_self_signed()
+    ca_workspace.add_trusted_root(root)
+    leaf = ca_workspace.issue_new_leaf(root)
+    ca_workspace.assert_doesnt_validate(leaf)
 
 
 def test_pathlen(ca_workspace):

@@ -7,7 +7,6 @@
 
 # Failure
 
-- Root missing ca:true
 - Conflicting pathlens
 - No SAN for cert
 - Name constraint in excluded
