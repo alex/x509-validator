@@ -17,7 +17,7 @@
 - maximum chain depth
 - Unknown critical extension
 
-# Need to write full test cases for
+# Need to write full test case description for
 
 - AIA chasing
 - CRL
