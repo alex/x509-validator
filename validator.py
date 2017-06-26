@@ -18,11 +18,24 @@ def _build_name_mapping(roots):
     return mapping
 
 
+def _hostname_matches(hostname, cert_hostname):
+    hostname_prefix, hostname_rest = hostname.split(u".", 1)
+    cert_hostname_prefix, cert_hostname_rest = cert_hostname.split(u".", 1)
+    return (
+        (
+            cert_hostname_prefix == u"*" or
+            cert_hostname_prefix == hostname_prefix
+        ) and
+        cert_hostname_rest == hostname_rest
+    )
+
+
 class ValidationContext(object):
-    def __init__(self, extra_certs=[]):
-        self.timestamp = datetime.datetime.utcnow()
+    def __init__(self, name, extra_certs=[]):
+        self.name = name
         self.extra_certs = extra_certs
         self._extra_certs_by_name = _build_name_mapping(extra_certs)
+        self.timestamp = datetime.datetime.utcnow()
 
 
 _MAX_CHAIN_DEPTH = 8
@@ -39,6 +52,10 @@ class X509Validator(object):
             ctx = ValidationContext()
         if not self._is_valid_cert(cert, ctx):
             raise ValidationError
+
+        if not self._is_name_correct(cert, ctx.name):
+            raise ValidationError
+
         for chain in self._build_chain_from(cert, ctx, depth=0):
             return chain
         raise ValidationError
@@ -48,6 +65,26 @@ class X509Validator(object):
             yield issuer
         for issuer in self._roots_by_name.get(cert.issuer, []):
             yield issuer
+
+    def _is_name_correct(self, cert, name):
+        if not isinstance(name, x509.DNSName):
+            raise ValidationError
+        hostname = name.value
+        try:
+            san = cert.extensions.get_extension_for_class(
+                x509.SubjectAlternativeName
+            ).value
+        except x509.ExtensionNotFound:
+            return False
+
+        for entry in san:
+            if not isinstance(entry, x509.DNSName):
+                # TODO: verify that it's not an error to see strange SAN
+                # entries
+                continue
+            if _hostname_matches(hostname, entry.value):
+                return True
+        return False
 
     def _is_valid_cert(self, cert, ctx):
         return (

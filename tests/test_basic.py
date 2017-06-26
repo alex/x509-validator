@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
+import ipaddress
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -25,8 +26,12 @@ class CAWorkspace(object):
     def build_validator(self):
         return X509Validator(self._roots)
 
-    def build_validation_context(self, extra_certs=[]):
-        return ValidationContext(extra_certs=[c.cert for c in extra_certs])
+    def build_validation_context(self, name=x509.DNSName(u"example.com"),
+                                 extra_certs=[]):
+        return ValidationContext(
+            name=name,
+            extra_certs=[c.cert for c in extra_certs]
+        )
 
     def assert_doesnt_validate(self, cert, **kwargs):
         validator = self.build_validator()
@@ -41,12 +46,16 @@ class CAWorkspace(object):
         )
         assert chain == [c.cert for c in expected_chain]
 
-    def _issue_new_cert(self, key=None, issuer=None, not_valid_before=None,
-                        not_valid_after=None, signature_hash_algorithm=None,
-                        extra_extensions=[]):
+    def _issue_new_cert(self, key=None, names=None, issuer=None,
+                        not_valid_before=None, not_valid_after=None,
+                        signature_hash_algorithm=None, extra_extensions=[]):
 
         if key is None:
             key = self._key_cache.generate_rsa_key()
+
+        if names is None:
+            names = [x509.DNSName(u"example.com")]
+
         subject_name = x509.Name([])
 
         if issuer is not None:
@@ -78,6 +87,9 @@ class CAWorkspace(object):
             subject_name
         ).issuer_name(
             issuer_name
+        ).add_extension(
+            x509.SubjectAlternativeName(names),
+            critical=False,
         )
         for ext in extra_extensions:
             builder = builder.add_extension(ext.value, critical=ext.critical)
@@ -313,3 +325,38 @@ def test_unsupported_critical_extension_intermediate(ca_workspace):
     leaf = ca_workspace.issue_new_leaf(intermediate)
 
     ca_workspace.assert_doesnt_validate(leaf, extra_certs=[intermediate])
+
+
+def test_name_validation(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_validates(
+        cert, [cert, root], name=x509.DNSName(u"example.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        cert, name=x509.DNSName(u"google.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        cert, name=x509.DNSName(u"sub.example.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        cert, name=x509.IPAddress(ipaddress.IPv4Network(u"127.0.0.1"))
+    )
+
+    wildcard_cert = ca_workspace.issue_new_leaf(
+        root, names=[x509.DNSName(u"*.example.com")]
+    )
+    ca_workspace.assert_validates(
+        wildcard_cert, [wildcard_cert, root],
+        name=x509.DNSName(u"sub.example.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        wildcard_cert, name=x509.DNSName(u"example.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        wildcard_cert, name=x509.DNSName(u"sub.sub.example.com")
+    )
+    ca_workspace.assert_doesnt_validate(
+        wildcard_cert, name=x509.DNSName(u"google.com")
+    )
