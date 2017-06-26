@@ -1,0 +1,4 @@
+attrs
+pytest
+pytest-xdist
+git+https://github.com/pyca/cryptography
