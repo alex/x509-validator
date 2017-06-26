@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import datetime
+from collections import defaultdict
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -20,20 +21,22 @@ class CertificatePair(object):
 
 class KeyCache(object):
     def __init__(self):
-        self._inuse_keys = []
-        self._free_keys = []
+        self._inuse_keys = defaultdict(list)
+        self._free_keys = defaultdict(list)
 
-    def generate_rsa_key(self):
-        if self._free_keys:
-            key = self._free_keys.pop()
+    def generate_rsa_key(self, public_exponent=65537, key_size=2048):
+        params = (public_exponent, key_size)
+        if self._free_keys[params]:
+            key = self._free_keys[params].pop()
         else:
-            key = rsa.generate_private_key(65537, 2048, default_backend())
-        self._inuse_keys.append(key)
+            key = rsa.generate_private_key(*params, backend=default_backend())
+        self._inuse_keys[params].append(key)
         return key
 
     def reset(self):
-        self._free_keys.extend(self._inuse_keys)
-        del self._inuse_keys[:]
+        for params, keys in self._inuse_keys.items():
+            self._free_keys[params].extend(keys)
+        self._inuse_keys.clear()
 
 
 class CAWorkspace(object):
@@ -60,9 +63,11 @@ class CAWorkspace(object):
         )
         assert cert.cert in chain
 
-    def _issue_new_cert(self, issuer=None, not_valid_before=None,
+    def _issue_new_cert(self, key=None, issuer=None, not_valid_before=None,
                         not_valid_after=None, extra_extensions=[]):
-        key = self._key_cache.generate_rsa_key()
+
+        if key is None:
+            key = self._key_cache.generate_rsa_key()
         subject_name = x509.Name([])
 
         if issuer is not None:
@@ -227,3 +232,12 @@ def test_root_validity(ca_workspace):
 
     ca_workspace.assert_doesnt_validate(expired_root_leaf)
     ca_workspace.assert_doesnt_validate(not_yet_valid_root_leaf)
+
+
+def test_rsa_key_too_small(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root()
+    leaf = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_rsa_key(key_size=1024)
+    )
+
+    ca_workspace.assert_doesnt_validate(leaf)

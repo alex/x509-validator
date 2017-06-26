@@ -46,7 +46,10 @@ class X509Validator(object):
             yield issuer
 
     def _is_valid_cert(self, cert, ctx):
-        return cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after
+        return (
+            cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after and
+            cert.public_key().key_size >= 2048
+        )
 
     def _is_valid_issuer(self, cert, issuer, depth, ctx):
         # TODO:
