@@ -29,7 +29,9 @@ class KeyCache(object):
             params = tuple(entry["params"])
             for key in entry["keys"]:
                 key = serialization.load_der_private_key(
-                    base64.b64decode(key), password=None, backend=default_backend()
+                    base64.b64decode(key),
+                    password=None,
+                    backend=default_backend(),
                 )
                 self._free_keys[params].append(key)
 
@@ -138,7 +140,9 @@ class CAWorkspace(object):
         )
         for ext in extra_extensions:
             builder = builder.add_extension(ext, critical=False)
-        cert = builder.sign(ca_key, signature_hash_algorithm, default_backend())
+        cert = builder.sign(
+            ca_key, signature_hash_algorithm, default_backend()
+        )
         return CertificatePair(cert, key)
 
     def _issue_new_ca(self, issuer=None, path_length=None, **kwargs):
@@ -177,6 +181,10 @@ def ca_workspace(key_cache):
         key_cache.reset()
 
 
+def relative_datetime(td):
+    return datetime.datetime.utcnow() + td
+
+
 def test_empty_trust_store(ca_workspace):
     cert = ca_workspace.issue_new_self_signed()
     ca_workspace.assert_doesnt_validate(cert)
@@ -202,7 +210,9 @@ def test_intermediate(ca_workspace):
     intermediate = ca_workspace.issue_new_ca_certificate(root)
     cert = ca_workspace.issue_new_leaf(intermediate)
 
-    ca_workspace.assert_validates(cert, [cert, intermediate, root], extra_certs=[intermediate])
+    ca_workspace.assert_validates(
+        cert, [cert, intermediate, root], extra_certs=[intermediate]
+    )
 
 
 def test_ca_true_required(ca_workspace):
@@ -236,7 +246,9 @@ def test_pathlen(ca_workspace):
     cert = ca_workspace.issue_new_leaf(intermediate2)
 
     ca_workspace.assert_validates(direct1, [direct1, root])
-    ca_workspace.assert_validates(direct2, [direct2, intermediate1, root], extra_certs=[intermediate1])
+    ca_workspace.assert_validates(
+        direct2, [direct2, intermediate1, root], extra_certs=[intermediate1]
+    )
     ca_workspace.assert_doesnt_validate(
         cert, extra_certs=[intermediate1, intermediate2]
     )
@@ -257,13 +269,13 @@ def test_leaf_validity(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
     expired = ca_workspace.issue_new_leaf(
         root,
-        not_valid_before=datetime.datetime.today() - datetime.timedelta(days=2),
-        not_valid_after=datetime.datetime.today() - datetime.timedelta(days=1),
+        not_valid_before=relative_datetime(-datetime.timedelta(days=2)),
+        not_valid_after=relative_datetime(-datetime.timedelta(days=1)),
     )
     not_yet_valid = ca_workspace.issue_new_leaf(
         root,
-        not_valid_before=datetime.datetime.today() + datetime.timedelta(days=1),
-        not_valid_after=datetime.datetime.today() + datetime.timedelta(days=2),
+        not_valid_before=relative_datetime(datetime.timedelta(days=1)),
+        not_valid_after=relative_datetime(datetime.timedelta(days=2)),
     )
 
     ca_workspace.assert_doesnt_validate(expired)
@@ -272,12 +284,12 @@ def test_leaf_validity(ca_workspace):
 
 def test_root_validity(ca_workspace):
     expired_root = ca_workspace.issue_new_trusted_root(
-        not_valid_before=datetime.datetime.today() - datetime.timedelta(days=2),
-        not_valid_after=datetime.datetime.today() - datetime.timedelta(days=1),
+        not_valid_before=relative_datetime(-datetime.timedelta(days=2)),
+        not_valid_after=relative_datetime(-datetime.timedelta(days=1)),
     )
     not_yet_valid_root = ca_workspace.issue_new_trusted_root(
-        not_valid_before=datetime.datetime.today() + datetime.timedelta(days=1),
-        not_valid_after=datetime.datetime.today() + datetime.timedelta(days=2),
+        not_valid_before=relative_datetime(datetime.timedelta(days=1)),
+        not_valid_after=relative_datetime(datetime.timedelta(days=2)),
     )
 
     expired_root_leaf = ca_workspace.issue_new_leaf(expired_root)
@@ -298,8 +310,12 @@ def test_rsa_key_too_small(ca_workspace, key_cache):
 
 def test_unsupported_signature_hash(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
-    md5_leaf = ca_workspace.issue_new_leaf(root, signature_hash_algorithm=hashes.MD5())
-    sha1_leaf = ca_workspace.issue_new_leaf(root, signature_hash_algorithm=hashes.SHA1())
+    md5_leaf = ca_workspace.issue_new_leaf(
+        root, signature_hash_algorithm=hashes.MD5()
+    )
+    sha1_leaf = ca_workspace.issue_new_leaf(
+        root, signature_hash_algorithm=hashes.SHA1()
+    )
 
     ca_workspace.assert_doesnt_validate(md5_leaf)
     ca_workspace.assert_doesnt_validate(sha1_leaf)

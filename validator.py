@@ -27,6 +27,7 @@ class ValidationContext(object):
 
 _MAX_CHAIN_DEPTH = 8
 
+
 class X509Validator(object):
     def __init__(self, roots):
         self._roots = roots
@@ -99,5 +100,6 @@ class X509Validator(object):
             return
         for issuer in self._find_potential_issuers(cert, ctx):
             if self._is_valid_issuer(cert, issuer, depth, ctx):
-                for chain in self._build_chain_from(issuer, ctx, depth=depth+1):
+                chains = self._build_chain_from(issuer, ctx, depth=depth+1)
+                for chain in chains:
                     yield [cert] + chain
