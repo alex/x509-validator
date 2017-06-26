@@ -1,11 +1,13 @@
-# Success
+# Test cases that need to be written (which imply additional code)
+
+## Success
 
 - Name constraint in permitted
 - P256
 - P384
 - Ed25519
 
-# Failure
+## Failure
 
 - No SAN for cert
 - Name constraint in excluded
@@ -13,7 +15,7 @@
 - Signature not correct
 - Unsupported curve
 
-# Need to write full test case description for
+## Need to write full test case description for
 
 - AIA chasing
 - CRL
