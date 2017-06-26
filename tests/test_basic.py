@@ -91,12 +91,12 @@ class CAWorkspace(object):
         with pytest.raises(ValidationError):
             validator.validate(cert.cert, ctx)
 
-    def assert_validates(self, cert, **kwargs):
+    def assert_validates(self, cert, expected_chain, **kwargs):
         validator = self.build_validator()
         chain = validator.validate(
             cert.cert, self.build_validation_context(**kwargs)
         )
-        assert cert.cert in chain
+        assert chain == [c.cert for c in expected_chain]
 
     def _issue_new_cert(self, key=None, issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
@@ -186,7 +186,7 @@ def test_simple_issuance(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
     cert = ca_workspace.issue_new_leaf(root)
 
-    ca_workspace.assert_validates(cert)
+    ca_workspace.assert_validates(cert, [cert, root])
 
 
 def test_untrusted_issuer(ca_workspace):
@@ -202,7 +202,7 @@ def test_intermediate(ca_workspace):
     intermediate = ca_workspace.issue_new_ca_certificate(root)
     cert = ca_workspace.issue_new_leaf(intermediate)
 
-    ca_workspace.assert_validates(cert, extra_certs=[intermediate])
+    ca_workspace.assert_validates(cert, [cert, intermediate, root], extra_certs=[intermediate])
 
 
 def test_ca_true_required(ca_workspace):
@@ -210,7 +210,7 @@ def test_ca_true_required(ca_workspace):
     cert = ca_workspace.issue_new_leaf(root)
     untrusted = ca_workspace.issue_new_leaf(cert)
 
-    ca_workspace.assert_validates(cert)
+    ca_workspace.assert_validates(cert, [cert, root])
     ca_workspace.assert_doesnt_validate(untrusted, extra_certs=[cert])
 
     root = ca_workspace.issue_new_self_signed()
@@ -225,18 +225,18 @@ def test_pathlen(ca_workspace):
     direct = ca_workspace.issue_new_leaf(root)
     cert = ca_workspace.issue_new_leaf(intermediate)
 
-    ca_workspace.assert_validates(direct)
+    ca_workspace.assert_validates(direct, [direct, root])
     ca_workspace.assert_doesnt_validate(cert, extra_certs=[intermediate])
 
     root = ca_workspace.issue_new_trusted_root(path_length=1)
     direct1 = ca_workspace.issue_new_leaf(root)
     intermediate1 = ca_workspace.issue_new_ca_certificate(root)
-    direct2 = ca_workspace.issue_new_leaf(root)
+    direct2 = ca_workspace.issue_new_leaf(intermediate1)
     intermediate2 = ca_workspace.issue_new_ca_certificate(intermediate)
     cert = ca_workspace.issue_new_leaf(intermediate2)
 
-    ca_workspace.assert_validates(direct1)
-    ca_workspace.assert_validates(direct2, extra_certs=[intermediate1])
+    ca_workspace.assert_validates(direct1, [direct1, root])
+    ca_workspace.assert_validates(direct2, [direct2, intermediate1, root], extra_certs=[intermediate1])
     ca_workspace.assert_doesnt_validate(
         cert, extra_certs=[intermediate1, intermediate2]
     )
