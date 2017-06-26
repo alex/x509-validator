@@ -97,11 +97,13 @@ class CAWorkspace(object):
         cert = builder.sign(ca_key, hashes.SHA256(), default_backend())
         return CertificatePair(cert, key)
 
-    def _issue_new_ca(self, issuer=None, path_length=None):
+    def _issue_new_ca(self, issuer=None, path_length=None, **kwargs):
         return self._issue_new_cert(
-            issuer=issuer, extra_extensions=[
+            issuer=issuer,
+            extra_extensions=[
                 x509.BasicConstraints(ca=True, path_length=path_length)
-            ]
+            ],
+            **kwargs
         )
 
     def issue_new_trusted_root(self, **kwargs):
@@ -208,3 +210,20 @@ def test_leaf_validity(ca_workspace):
 
     ca_workspace.assert_doesnt_validate(expired)
     ca_workspace.assert_doesnt_validate(not_yet_valid)
+
+
+def test_root_validity(ca_workspace):
+    expired_root = ca_workspace.issue_new_trusted_root(
+        not_valid_before=datetime.datetime.today() - datetime.timedelta(days=2),
+        not_valid_after=datetime.datetime.today() - datetime.timedelta(days=1),
+    )
+    not_yet_valid_root = ca_workspace.issue_new_trusted_root(
+        not_valid_before=datetime.datetime.today() + datetime.timedelta(days=1),
+        not_valid_after=datetime.datetime.today() + datetime.timedelta(days=2),
+    )
+
+    expired_root_leaf = ca_workspace.issue_new_leaf(expired_root)
+    not_yet_valid_root_leaf = ca_workspace.issue_new_leaf(not_yet_valid_root)
+
+    ca_workspace.assert_doesnt_validate(expired_root_leaf)
+    ca_workspace.assert_doesnt_validate(not_yet_valid_root_leaf)

@@ -51,11 +51,11 @@ class X509Validator(object):
     def _is_valid_issuer(self, cert, issuer, depth, ctx):
         # TODO:
         # - name constraints
-        # - expired
         # - key parameter validation
         # - public_key matches signature type
         # - maximum chain depth
         # - valid signature algorithms
+
         if not self._is_valid_cert(issuer, ctx):
             return False
 
