@@ -158,8 +158,8 @@ class CAWorkspace(object):
         self.add_trusted_root(certpair)
         return certpair
 
-    def issue_new_ca_certificate(self, ca):
-        return self._issue_new_ca(issuer=ca)
+    def issue_new_ca_certificate(self, ca, **kwargs):
+        return self._issue_new_ca(issuer=ca, **kwargs)
 
     def issue_new_leaf(self, ca, **kwargs):
         return self._issue_new_cert(issuer=ca, **kwargs)
@@ -239,6 +239,17 @@ def test_pathlen(ca_workspace):
     ca_workspace.assert_validates(direct2, extra_certs=[intermediate1])
     ca_workspace.assert_doesnt_validate(
         cert, extra_certs=[intermediate1, intermediate2]
+    )
+
+
+def test_conflicting_pathlen(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root(path_length=1)
+    intermediate1 = ca_workspace.issue_new_ca_certificate(root, path_length=2)
+    intermediate2 = ca_workspace.issue_new_ca_certificate(intermediate1)
+    leaf = ca_workspace.issue_new_leaf(intermediate2)
+
+    ca_workspace.assert_doesnt_validate(
+        leaf, extra_certs=[intermediate1, intermediate2]
     )
 
 

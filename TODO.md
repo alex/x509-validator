@@ -7,7 +7,6 @@
 
 # Failure
 
-- Conflicting pathlens
 - No SAN for cert
 - Name constraint in excluded
 - Name constraint not present
