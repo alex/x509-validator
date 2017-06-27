@@ -47,9 +47,7 @@ class X509Validator(object):
         self._roots = roots
         self._roots_by_name = _build_name_mapping(roots)
 
-    def validate(self, cert, ctx=None):
-        if ctx is None:
-            ctx = ValidationContext()
+    def validate(self, cert, ctx):
         if not self._is_valid_cert(cert, ctx):
             raise ValidationError
 
