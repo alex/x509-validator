@@ -2,7 +2,6 @@
 
 ## Success
 
-- Name constraint in permitted
 - P256
 - P384
 - Ed25519
@@ -10,8 +9,6 @@
 ## Failure
 
 - No SAN for cert
-- Name constraint in excluded
-- Name constraint not present
 - Signature not correct
 - Unsupported curve
 

@@ -30,6 +30,20 @@ def _hostname_matches(hostname, cert_hostname):
     )
 
 
+def _name_constraint_matches(hostname, name_constraint):
+    if not isinstance(name_constraint, x509.DNSName):
+        return False
+    constraint_hostname = name_constraint.value
+
+    if constraint_hostname.startswith(u"."):
+        return hostname.endswith(constraint_hostname)
+    else:
+        return (
+            hostname == constraint_hostname or
+            hostname.endswith(u"." + constraint_hostname)
+        )
+
+
 class ValidationContext(object):
     def __init__(self, name, extra_certs=[]):
         self.name = name
@@ -84,6 +98,28 @@ class X509Validator(object):
                 return True
         return False
 
+    def _check_name_constraints(self, cert, name):
+        try:
+            nc = cert.extensions.get_extension_for_class(
+                x509.NameConstraints
+            ).value
+        except x509.ExtensionNotFound:
+            return True
+
+        assert isinstance(name, x509.DNSName)
+        if nc.permitted_subtrees:
+            for constraint in nc.permitted_subtrees:
+                if _name_constraint_matches(name.value, constraint):
+                    break
+            else:
+                return False
+
+        for constraint in nc.excluded_subtrees:
+            if _name_constraint_matches(name.value, constraint):
+                return False
+
+        return True
+
     def _is_valid_cert(self, cert, ctx):
         return (
             cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after and
@@ -110,6 +146,9 @@ class X509Validator(object):
             basic_constraints.path_length is not None and
             basic_constraints.path_length < depth
         ):
+            return False
+
+        if not self._check_name_constraints(issuer, ctx.name):
             return False
 
         public_key = issuer.public_key()
