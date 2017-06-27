@@ -179,16 +179,25 @@ def test_intermediate(ca_workspace):
 
 def test_ca_true_required(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
-    cert = ca_workspace.issue_new_leaf(root)
-    untrusted = ca_workspace.issue_new_leaf(cert)
+    cert1 = ca_workspace.issue_new_leaf(root)
+    cert2 = ca_workspace.issue_new_leaf(root, extra_extensions=[
+        create_extension(
+            x509.BasicConstraints(ca=False, path_length=None),
+            critical=True,
+        )
+    ])
+    untrusted1 = ca_workspace.issue_new_leaf(cert1)
+    untrusted2 = ca_workspace.issue_new_leaf(cert2)
 
-    ca_workspace.assert_validates(cert, [cert, root])
-    ca_workspace.assert_doesnt_validate(untrusted, extra_certs=[cert])
+    ca_workspace.assert_validates(cert1, [cert1, root])
+    ca_workspace.assert_validates(cert2, [cert2, root])
+    ca_workspace.assert_doesnt_validate(untrusted1, extra_certs=[cert1])
+    ca_workspace.assert_doesnt_validate(untrusted2, extra_certs=[cert2])
 
     root = ca_workspace.issue_new_self_signed()
     ca_workspace.add_trusted_root(root)
     leaf = ca_workspace.issue_new_leaf(root)
-    ca_workspace.assert_doesnt_validate(leaf)
+    ca_workspace.assert_doesnt_validate(leaf, extra_certs=[root])
 
 
 def test_pathlen(ca_workspace):
