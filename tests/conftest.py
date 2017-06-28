@@ -9,10 +9,14 @@ import pytest
 
 
 class KeyCache(object):
-    def __init__(self, cached_entries):
+    def __init__(self, keys):
         self._inuse_keys = defaultdict(list)
-        self._free_keys = defaultdict(list)
+        self._free_keys = defaultdict(list, keys)
 
+
+    @classmethod
+    def from_dump(cls, cached_entries):
+        keys = defaultdict(list)
         for entry in cached_entries:
             params = tuple(entry["params"])
             for key in entry["keys"]:
@@ -21,7 +25,8 @@ class KeyCache(object):
                     password=None,
                     backend=default_backend(),
                 )
-                self._free_keys[params].append(key)
+                keys[params].append(key)
+        return cls(keys)
 
     def dump(self):
         cache_entries = []
@@ -57,7 +62,7 @@ class KeyCache(object):
 @pytest.fixture(scope="session")
 def key_cache(request):
     keys = request.config.cache.get("x509-validator/keys", [])
-    key_cache = KeyCache(keys)
+    key_cache = KeyCache.from_dump(keys)
     try:
         yield key_cache
     finally:
