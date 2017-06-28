@@ -8,7 +8,6 @@
 
 ## Failure
 
-- No SAN for cert
 - Signature not correct
 - Unsupported curve
 

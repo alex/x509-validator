@@ -46,15 +46,13 @@ class CAWorkspace(object):
         )
         assert chain == [c.cert for c in expected_chain]
 
-    def _issue_new_cert(self, key=None, names=None, issuer=None,
-                        not_valid_before=None, not_valid_after=None,
-                        signature_hash_algorithm=None, extra_extensions=[]):
+    def _issue_new_cert(self, key=None, names=[x509.DNSName(u"example.com")],
+                        issuer=None, not_valid_before=None,
+                        not_valid_after=None, signature_hash_algorithm=None,
+                        extra_extensions=[]):
 
         if key is None:
             key = self._key_cache.generate_rsa_key()
-
-        if names is None:
-            names = [x509.DNSName(u"example.com")]
 
         subject_name = x509.Name([])
 
@@ -87,10 +85,12 @@ class CAWorkspace(object):
             subject_name
         ).issuer_name(
             issuer_name
-        ).add_extension(
-            x509.SubjectAlternativeName(names),
-            critical=False,
         )
+        if names is not None:
+            builder = builder.add_extension(
+                x509.SubjectAlternativeName(names),
+                critical=False,
+            )
         for ext in extra_extensions:
             builder = builder.add_extension(ext.value, critical=ext.critical)
         cert = builder.sign(
@@ -368,6 +368,16 @@ def test_name_validation(ca_workspace):
     )
     ca_workspace.assert_doesnt_validate(
         wildcard_cert, name=x509.DNSName(u"google.com")
+    )
+
+    empty_san_cert = ca_workspace.issue_new_leaf(root, names=[])
+    ca_workspace.assert_doesnt_validate(
+        empty_san_cert, name=x509.DNSName(u"example.com")
+    )
+
+    no_san_cert = ca_workspace.issue_new_leaf(root, names=None)
+    ca_workspace.assert_doesnt_validate(
+        no_san_cert, name=x509.DNSName(u"example.com")
     )
 
 
