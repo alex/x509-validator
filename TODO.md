@@ -20,6 +20,7 @@
 - Bad key type
 - Unknown extensions
 - Bad signature type
+- ski/aki?
 - issuer/subject matching?
 - key usages
 - extended key usages
