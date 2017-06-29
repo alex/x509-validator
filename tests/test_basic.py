@@ -6,6 +6,7 @@ import ipaddress
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 import pytest
 
@@ -126,8 +127,8 @@ class CAWorkspace(object):
     def issue_new_leaf(self, ca, **kwargs):
         return self._issue_new_cert(issuer=ca, **kwargs)
 
-    def issue_new_self_signed(self):
-        return self._issue_new_cert()
+    def issue_new_self_signed(self, **kwargs):
+        return self._issue_new_cert(**kwargs)
 
 
 @pytest.fixture
@@ -279,7 +280,7 @@ def test_rsa_key_too_small(ca_workspace, key_cache):
     ca_workspace.assert_doesnt_validate(leaf)
 
 
-def test_unsupported_signature_hash(ca_workspace):
+def test_unsupported_signature_hash(ca_workspace, key_cache):
     root = ca_workspace.issue_new_trusted_root()
     md5_leaf = ca_workspace.issue_new_leaf(
         root, signature_hash_algorithm=hashes.MD5()
@@ -289,6 +290,15 @@ def test_unsupported_signature_hash(ca_workspace):
     )
 
     ca_workspace.assert_doesnt_validate(md5_leaf)
+    ca_workspace.assert_doesnt_validate(sha1_leaf)
+
+    root = ca_workspace.issue_new_trusted_root(
+        key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+    sha1_leaf = ca_workspace.issue_new_leaf(
+        root, signature_hash_algorithm=hashes.SHA1()
+    )
+
     ca_workspace.assert_doesnt_validate(sha1_leaf)
 
 
@@ -451,3 +461,44 @@ def test_name_constraints_excluded(ca_workspace):
     ca_workspace.assert_validates(
         google_cert, [google_cert, root], name=x509.DNSName(u"google.com")
     )
+
+
+def test_p256_chain(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root(
+        key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+    leaf = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+
+    ca_workspace.assert_validates(leaf, [leaf, root])
+
+
+def test_mixed_chain(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root()
+    leaf = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+
+    ca_workspace.assert_validates(leaf, [leaf, root])
+
+    root = ca_workspace.issue_new_trusted_root(
+        key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+    leaf = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_validates(leaf, [leaf, root])
+
+
+def test_untrusted_issuer_p256(ca_workspace, key_cache):
+    ca_workspace.issue_new_trusted_root(
+        key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+    root = ca_workspace.issue_new_self_signed(
+        key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+    cert = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_ec_key(ec.SECP256R1())
+    )
+
+    ca_workspace.assert_doesnt_validate(cert)

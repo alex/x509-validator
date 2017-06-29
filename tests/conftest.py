@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 import pytest
 
@@ -12,7 +12,6 @@ class KeyCache(object):
     def __init__(self, keys):
         self._inuse_keys = defaultdict(list)
         self._free_keys = defaultdict(list, keys)
-
 
     @classmethod
     def from_dump(cls, cached_entries):
@@ -44,14 +43,27 @@ class KeyCache(object):
             })
         return cache_entries
 
-    def generate_rsa_key(self, public_exponent=65537, key_size=2048):
-        params = (public_exponent, key_size)
+    def _generate_key(self, params, create_key):
         if self._free_keys[params]:
             key = self._free_keys[params].pop()
         else:
-            key = rsa.generate_private_key(*params, backend=default_backend())
+            key = create_key()
         self._inuse_keys[params].append(key)
         return key
+
+    def generate_rsa_key(self, public_exponent=65537, key_size=2048):
+        return self._generate_key(
+            ("rsa", public_exponent, key_size),
+            lambda: rsa.generate_private_key(
+                public_exponent, key_size, backend=default_backend()
+            )
+        )
+
+    def generate_ec_key(self, curve):
+        return self._generate_key(
+            ("ecdsa", curve.name),
+            lambda: ec.generate_private_key(curve, backend=default_backend()),
+        )
 
     def reset(self):
         for params, keys in self._inuse_keys.items():

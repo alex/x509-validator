@@ -4,7 +4,7 @@ import datetime
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
 
 
 class ValidationError(Exception):
@@ -123,11 +123,17 @@ class X509Validator(object):
     def _is_valid_cert(self, cert, ctx):
         return (
             cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after and
-            cert.public_key().key_size >= 2048 and
+            self._is_valid_public_key(cert.public_key()) and
             all(
                 ext.oid in _SUPPORTED_EXTENSIONS
                 for ext in cert.extensions if ext.critical
             )
+        )
+
+    def _is_valid_public_key(self, key):
+        return (
+            (isinstance(key, rsa.RSAPublicKey) and key.key_size >= 2048) or
+            isinstance(key, ec.EllipticCurvePublicKey)
         )
 
     def _is_valid_issuer(self, cert, issuer, depth, ctx):
@@ -164,6 +170,20 @@ class X509Validator(object):
                     cert.tbs_certificate_bytes,
                     padding.PKCS1v15(),
                     cert.signature_hash_algorithm,
+                )
+            except InvalidSignature:
+                return False
+        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+            if cert.signature_algorithm_oid not in [
+                x509.SignatureAlgorithmOID.ECDSA_WITH_SHA256
+            ]:
+                return False
+
+            try:
+                public_key.verify(
+                    cert.signature,
+                    cert.tbs_certificate_bytes,
+                    ec.ECDSA(cert.signature_hash_algorithm),
                 )
             except InvalidSignature:
                 return False
