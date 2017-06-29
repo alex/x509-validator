@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import dsa, ec, rsa
 
 import pytest
 
@@ -63,6 +63,12 @@ class KeyCache(object):
         return self._generate_key(
             ("ecdsa", curve.name),
             lambda: ec.generate_private_key(curve, backend=default_backend()),
+        )
+
+    def generate_dsa_key(self):
+        return self._generate_key(
+            ("dsa",),
+            lambda: dsa.generate_private_key(2048, backend=default_backend())
         )
 
     def reset(self):

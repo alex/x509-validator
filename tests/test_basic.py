@@ -520,3 +520,12 @@ def test_p384(ca_workspace, key_cache):
     )
 
     ca_workspace.assert_validates(cert, [cert, root])
+
+
+def test_dsa_unsupported(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_dsa_key()
+    )
+
+    ca_workspace.assert_doesnt_validate(cert)

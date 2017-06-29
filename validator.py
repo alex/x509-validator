@@ -192,6 +192,7 @@ class X509Validator(object):
             except InvalidSignature:
                 return False
         else:
+            # Unreachable because of the `_is_valid_public_key` check.
             return False
         return True
 
