@@ -502,3 +502,21 @@ def test_untrusted_issuer_p256(ca_workspace, key_cache):
     )
 
     ca_workspace.assert_doesnt_validate(cert)
+
+
+def test_unsupported_curve(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_ec_key(ec.SECP192R1())
+    )
+
+    ca_workspace.assert_doesnt_validate(cert)
+
+
+def test_p384(ca_workspace, key_cache):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(
+        root, key=key_cache.generate_ec_key(ec.SECP384R1())
+    )
+
+    ca_workspace.assert_validates(cert, [cert, root])

@@ -54,6 +54,7 @@ class ValidationContext(object):
 
 _MAX_CHAIN_DEPTH = 8
 _SUPPORTED_EXTENSIONS = {x509.ExtensionOID.BASIC_CONSTRAINTS}
+_SUPPORTED_CURVES = {ec.SECP256R1, ec.SECP384R1}
 
 
 class X509Validator(object):
@@ -133,7 +134,10 @@ class X509Validator(object):
     def _is_valid_public_key(self, key):
         return (
             (isinstance(key, rsa.RSAPublicKey) and key.key_size >= 2048) or
-            isinstance(key, ec.EllipticCurvePublicKey)
+            (
+                isinstance(key, ec.EllipticCurvePublicKey) and
+                type(key.curve) in _SUPPORTED_CURVES
+            )
         )
 
     def _is_valid_issuer(self, cert, issuer, depth, ctx):

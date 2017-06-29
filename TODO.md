@@ -2,13 +2,11 @@
 
 ## Success
 
-- P384
 - Ed25519
 
 ## Failure
 
 - Signature not correct
-- Unsupported curve
 - DSA keys
 
 ## Need to write full test case description for
