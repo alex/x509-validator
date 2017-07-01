@@ -37,7 +37,7 @@ class KeyCache(object):
                         serialization.Encoding.DER,
                         serialization.PrivateFormat.PKCS8,
                         serialization.NoEncryption()
-                    ))
+                    )).decode("ascii")
                     for key in keys
                 ],
             })
