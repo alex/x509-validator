@@ -7,6 +7,9 @@
 ## Failure
 
 - Signature not correct
+- SPKI contains random oid
+    - Leaf
+    - intermediate
 
 ## Need to write full test case description for
 
@@ -14,11 +17,9 @@
 - CRL
 - SCT
 - OCSP
-- Bad key type (nonsense OID)
-- Unknown extensions
-- Bad signature type
 - ski/aki?
 - issuer/subject matching?
 - key usages
 - issuer alt names?
 - maximum validity period
+- ?
