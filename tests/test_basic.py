@@ -9,11 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 import pytest
 
-from .utils import create_extension
-
-
-def relative_datetime(td):
-    return datetime.datetime.utcnow() + td
+from .utils import create_extension, relative_datetime
 
 
 def test_empty_trust_store(ca_workspace):
