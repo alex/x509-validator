@@ -20,6 +20,5 @@
 - ski/aki?
 - issuer/subject matching?
 - key usages
-- extended key usages
 - issuer alt names?
 - maximum validity period

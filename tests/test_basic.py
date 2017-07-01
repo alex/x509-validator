@@ -10,7 +10,10 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 import pytest
 
-from validator import X509Validator, ValidationError, ValidationContext
+from validator import (
+    ANY_EXTENDED_KEY_USAGE_OID, X509Validator, ValidationError,
+    ValidationContext
+)
 
 
 class CertificatePair(object):
@@ -28,10 +31,13 @@ class CAWorkspace(object):
         return X509Validator(self._roots)
 
     def build_validation_context(self, name=x509.DNSName(u"example.com"),
-                                 extra_certs=[]):
+                                 extra_certs=[], extended_key_usage=None):
+        if extended_key_usage is None:
+            extended_key_usage = ANY_EXTENDED_KEY_USAGE_OID
         return ValidationContext(
             name=name,
-            extra_certs=[c.cert for c in extra_certs]
+            extra_certs=[c.cert for c in extra_certs],
+            extended_key_usage=extended_key_usage,
         )
 
     def assert_doesnt_validate(self, cert, **kwargs):
@@ -50,6 +56,7 @@ class CAWorkspace(object):
     def _issue_new_cert(self, key=None, names=[x509.DNSName(u"example.com")],
                         issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
+                        extended_key_usages=None,
                         extra_extensions=[]):
 
         if key is None:
@@ -74,6 +81,9 @@ class CAWorkspace(object):
         if signature_hash_algorithm is None:
             signature_hash_algorithm = hashes.SHA256()
 
+        if extended_key_usages is None:
+            extended_key_usages = [ANY_EXTENDED_KEY_USAGE_OID]
+
         builder = x509.CertificateBuilder().serial_number(
             1
         ).public_key(
@@ -92,6 +102,10 @@ class CAWorkspace(object):
                 x509.SubjectAlternativeName(names),
                 critical=False,
             )
+        builder = builder.add_extension(
+            x509.ExtendedKeyUsage(extended_key_usages),
+            critical=False,
+        )
         for ext in extra_extensions:
             builder = builder.add_extension(ext.value, critical=ext.critical)
         cert = builder.sign(
@@ -529,3 +543,44 @@ def test_dsa_unsupported(ca_workspace, key_cache):
     )
 
     ca_workspace.assert_doesnt_validate(cert)
+
+
+def test_extended_key_usage(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(
+        root, extended_key_usages=[x509.ExtendedKeyUsageOID.CLIENT_AUTH],
+    )
+
+    ca_workspace.assert_doesnt_validate(
+        cert, extended_key_usage=x509.ExtendedKeyUsageOID.SERVER_AUTH
+    )
+
+    root = ca_workspace.issue_new_trusted_root(
+        extended_key_usages=[x509.ExtendedKeyUsageOID.CLIENT_AUTH]
+    )
+    cert = ca_workspace.issue_new_leaf(root)
+    ca_workspace.assert_doesnt_validate(
+        cert, extended_key_usage=x509.ExtendedKeyUsageOID.SERVER_AUTH
+    )
+
+    root = ca_workspace.issue_new_trusted_root()
+    intermediate = ca_workspace.issue_new_ca_certificate(
+        root, extended_key_usages=[x509.ExtendedKeyUsageOID.CLIENT_AUTH]
+    )
+    cert = ca_workspace.issue_new_leaf(intermediate)
+
+    ca_workspace.assert_doesnt_validate(
+        cert,
+        extra_certs=[intermediate],
+        extended_key_usage=x509.ExtendedKeyUsageOID.SERVER_AUTH,
+    )
+
+
+def test_extended_key_usage_any(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_validates(
+        cert, [cert, root],
+        extended_key_usage=[x509.ExtendedKeyUsageOID.SERVER_AUTH]
+    )

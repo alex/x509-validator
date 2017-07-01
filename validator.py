@@ -7,6 +7,10 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
 
 
+# TODO: https://github.com/pyca/cryptography/issues/3745
+ANY_EXTENDED_KEY_USAGE_OID = x509.ObjectIdentifier("2.5.29.37.0")
+
+
 class ValidationError(Exception):
     pass
 
@@ -45,8 +49,9 @@ def _name_constraint_matches(hostname, name_constraint):
 
 
 class ValidationContext(object):
-    def __init__(self, name, extra_certs=[]):
+    def __init__(self, name, extended_key_usage, extra_certs=[]):
         self.name = name
+        self.extended_key_usage = extended_key_usage
         self.extra_certs = extra_certs
         self._extra_certs_by_name = _build_name_mapping(extra_certs)
         self.timestamp = datetime.datetime.utcnow()
@@ -122,6 +127,20 @@ class X509Validator(object):
         return True
 
     def _is_valid_cert(self, cert, ctx):
+        try:
+            eku = cert.extensions.get_extension_for_class(
+                x509.ExtendedKeyUsage
+            ).value
+        except x509.ExtensionNotFound:
+            # No EKU extension means "anything is permitted"
+            pass
+        else:
+            if (
+                ctx.extended_key_usage not in eku and
+                ANY_EXTENDED_KEY_USAGE_OID not in eku
+            ):
+                return False
+
         return (
             cert.not_valid_before <= ctx.timestamp <= cert.not_valid_after and
             self._is_valid_public_key(cert.public_key()) and
