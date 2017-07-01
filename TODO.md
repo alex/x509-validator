@@ -22,4 +22,5 @@
 - key usages
 - issuer alt names?
 - maximum validity period
+- policy constraints/certificate policies?
 - ?
