@@ -23,11 +23,11 @@ def _build_name_mapping(roots):
 
 
 def _hostname_matches(hostname, cert_hostname):
-    hostname_prefix, hostname_rest = hostname.split(u".", 1)
-    cert_hostname_prefix, cert_hostname_rest = cert_hostname.split(u".", 1)
+    hostname_prefix, hostname_rest = hostname.split(".", 1)
+    cert_hostname_prefix, cert_hostname_rest = cert_hostname.split(".", 1)
     return (
         (
-            cert_hostname_prefix == u"*" or
+            cert_hostname_prefix == "*" or
             cert_hostname_prefix == hostname_prefix
         ) and
         cert_hostname_rest == hostname_rest
@@ -39,12 +39,12 @@ def _name_constraint_matches(hostname, name_constraint):
         return False
     constraint_hostname = name_constraint.value
 
-    if constraint_hostname.startswith(u"."):
+    if constraint_hostname.startswith("."):
         return hostname.endswith(constraint_hostname)
     else:
         return (
             hostname == constraint_hostname or
-            hostname.endswith(u"." + constraint_hostname)
+            hostname.endswith("." + constraint_hostname)
         )
 
 
