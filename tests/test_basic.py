@@ -30,7 +30,7 @@ class CAWorkspace(object):
     def build_validator(self):
         return X509Validator(self._roots)
 
-    def build_validation_context(self, name=x509.DNSName(u"example.com"),
+    def build_validation_context(self, name=x509.DNSName("example.com"),
                                  extra_certs=[], extended_key_usage=None):
         if extended_key_usage is None:
             extended_key_usage = ANY_EXTENDED_KEY_USAGE_OID
@@ -53,7 +53,7 @@ class CAWorkspace(object):
         )
         assert chain == [c.cert for c in expected_chain]
 
-    def _issue_new_cert(self, key=None, names=[x509.DNSName(u"example.com")],
+    def _issue_new_cert(self, key=None, names=[x509.DNSName("example.com")],
                         issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
                         extended_key_usages=None,
@@ -365,70 +365,70 @@ def test_name_validation(ca_workspace):
     cert = ca_workspace.issue_new_leaf(root)
 
     ca_workspace.assert_validates(
-        cert, [cert, root], name=x509.DNSName(u"example.com")
+        cert, [cert, root], name=x509.DNSName("example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        cert, name=x509.DNSName(u"google.com")
+        cert, name=x509.DNSName("google.com")
     )
     ca_workspace.assert_doesnt_validate(
-        cert, name=x509.DNSName(u"sub.example.com")
+        cert, name=x509.DNSName("sub.example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        cert, name=x509.IPAddress(ipaddress.IPv4Network(u"127.0.0.1"))
+        cert, name=x509.IPAddress(ipaddress.IPv4Network("127.0.0.1"))
     )
 
     wildcard_cert = ca_workspace.issue_new_leaf(
-        root, names=[x509.DNSName(u"*.example.com")]
+        root, names=[x509.DNSName("*.example.com")]
     )
     ca_workspace.assert_validates(
         wildcard_cert, [wildcard_cert, root],
-        name=x509.DNSName(u"sub.example.com")
+        name=x509.DNSName("sub.example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        wildcard_cert, name=x509.DNSName(u"example.com")
+        wildcard_cert, name=x509.DNSName("example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        wildcard_cert, name=x509.DNSName(u"sub.sub.example.com")
+        wildcard_cert, name=x509.DNSName("sub.sub.example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        wildcard_cert, name=x509.DNSName(u"google.com")
+        wildcard_cert, name=x509.DNSName("google.com")
     )
 
     empty_san_cert = ca_workspace.issue_new_leaf(root, names=[])
     ca_workspace.assert_doesnt_validate(
-        empty_san_cert, name=x509.DNSName(u"example.com")
+        empty_san_cert, name=x509.DNSName("example.com")
     )
 
     no_san_cert = ca_workspace.issue_new_leaf(root, names=None)
     ca_workspace.assert_doesnt_validate(
-        no_san_cert, name=x509.DNSName(u"example.com")
+        no_san_cert, name=x509.DNSName("example.com")
     )
 
 
 @pytest.mark.parametrize(("trusted", "name"), [
-    (False, u"example.com"),
-    (True, u"sub.example.com"),
-    (True, u"sub.sub.example.com"),
-    (False, u"subsub.example.com"),
-    (False, u"sub.subsub.example.com"),
-    (False, u"google.com"),
-    (False, u"subsub.google.com"),
-    (True, u"sub.google.com"),
-    (True, u"sub.sub.google.com"),
-    (True, u"sub.sub.google.com"),
-    (False, u"mozilla.org"),
+    (False, "example.com"),
+    (True, "sub.example.com"),
+    (True, "sub.sub.example.com"),
+    (False, "subsub.example.com"),
+    (False, "sub.subsub.example.com"),
+    (False, "google.com"),
+    (False, "subsub.google.com"),
+    (True, "sub.google.com"),
+    (True, "sub.sub.google.com"),
+    (True, "sub.sub.google.com"),
+    (False, "mozilla.org"),
 ])
 def test_name_constraints(ca_workspace, trusted, name):
     root = ca_workspace.issue_new_trusted_root(extra_extensions=[
         create_extension(
             x509.NameConstraints(
                 permitted_subtrees=[
-                    x509.DNSName(u".example.com"),
-                    x509.DNSName(u"sub.google.com"),
-                    x509.IPAddress(ipaddress.IPv4Network(u"10.10.0.0/24")),
+                    x509.DNSName(".example.com"),
+                    x509.DNSName("sub.google.com"),
+                    x509.IPAddress(ipaddress.IPv4Network("10.10.0.0/24")),
                 ],
                 excluded_subtrees=[
-                    x509.DNSName(u"subsub.example.com"),
+                    x509.DNSName("subsub.example.com"),
                 ],
             ),
             critical=False,
@@ -450,30 +450,30 @@ def test_name_constraints_excluded(ca_workspace):
             x509.NameConstraints(
                 permitted_subtrees=[],
                 excluded_subtrees=[
-                    x509.DNSName(u"example.com"),
+                    x509.DNSName("example.com"),
                 ],
             ),
             critical=False,
         )
     ])
     example_cert = ca_workspace.issue_new_leaf(
-        root, names=[x509.DNSName(u"example.com")]
+        root, names=[x509.DNSName("example.com")]
     )
     example_sub_cert = ca_workspace.issue_new_leaf(
-        root, names=[x509.DNSName(u"sub.example.com")]
+        root, names=[x509.DNSName("sub.example.com")]
     )
     google_cert = ca_workspace.issue_new_leaf(
-        root, names=[x509.DNSName(u"google.com")]
+        root, names=[x509.DNSName("google.com")]
     )
 
     ca_workspace.assert_doesnt_validate(
-        example_cert, name=x509.DNSName(u"example.com")
+        example_cert, name=x509.DNSName("example.com")
     )
     ca_workspace.assert_doesnt_validate(
-        example_sub_cert, name=x509.DNSName(u"sub.example.com")
+        example_sub_cert, name=x509.DNSName("sub.example.com")
     )
     ca_workspace.assert_validates(
-        google_cert, [google_cert, root], name=x509.DNSName(u"google.com")
+        google_cert, [google_cert, root], name=x509.DNSName("google.com")
     )
 
 
