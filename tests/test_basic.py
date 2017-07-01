@@ -56,7 +56,7 @@ class CAWorkspace(object):
     def _issue_new_cert(self, key=None, names=[x509.DNSName("example.com")],
                         issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
-                        extended_key_usages=None,
+                        extended_key_usages=[ANY_EXTENDED_KEY_USAGE_OID],
                         extra_extensions=[]):
 
         if key is None:
@@ -81,9 +81,6 @@ class CAWorkspace(object):
         if signature_hash_algorithm is None:
             signature_hash_algorithm = hashes.SHA256()
 
-        if extended_key_usages is None:
-            extended_key_usages = [ANY_EXTENDED_KEY_USAGE_OID]
-
         builder = x509.CertificateBuilder().serial_number(
             1
         ).public_key(
@@ -102,10 +99,11 @@ class CAWorkspace(object):
                 x509.SubjectAlternativeName(names),
                 critical=False,
             )
-        builder = builder.add_extension(
-            x509.ExtendedKeyUsage(extended_key_usages),
-            critical=False,
-        )
+        if extended_key_usages is not None:
+            builder = builder.add_extension(
+                x509.ExtendedKeyUsage(extended_key_usages),
+                critical=False,
+            )
         for ext in extra_extensions:
             builder = builder.add_extension(ext.value, critical=ext.critical)
         cert = builder.sign(
@@ -578,6 +576,16 @@ def test_extended_key_usage(ca_workspace):
 
 def test_extended_key_usage_any(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
+    cert = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_validates(
+        cert, [cert, root],
+        extended_key_usage=[x509.ExtendedKeyUsageOID.SERVER_AUTH]
+    )
+
+
+def test_missing_extended_key_usage(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root(extended_key_usages=None)
     cert = ca_workspace.issue_new_leaf(root)
 
     ca_workspace.assert_validates(
