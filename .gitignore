@@ -1,2 +1,4 @@
 .cache/
 *.py[co]
+.coverage
+htmlcov/
