@@ -3,6 +3,10 @@
 ## Success
 
 - Ed25519
+    - Leaf
+    - CA
+    - bad signature
+    - invalid signature oid
 
 ## Failure
 
