@@ -25,7 +25,7 @@ class KeyCache(object):
         self._free_keys = defaultdict(list, keys)
 
     @classmethod
-    def from_dump(cls, cached_entries):
+    def _from_dump(cls, cached_entries):
         keys = defaultdict(list)
         for entry in cached_entries:
             params = tuple(entry["params"])
@@ -38,7 +38,7 @@ class KeyCache(object):
                 keys[params].append(key)
         return cls(keys)
 
-    def dump(self):
+    def _dump(self):
         cache_entries = []
         for (params, keys) in self._free_keys.items():
             cache_entries.append({
@@ -82,7 +82,7 @@ class KeyCache(object):
             lambda: dsa.generate_private_key(2048, backend=default_backend())
         )
 
-    def reset(self):
+    def _reset(self):
         for params, keys in self._inuse_keys.items():
             self._free_keys[params].extend(keys)
         self._inuse_keys.clear()
@@ -91,11 +91,11 @@ class KeyCache(object):
 @pytest.fixture(scope="session")
 def key_cache(request):
     keys = request.config.cache.get("x509-validator/keys", [])
-    key_cache = KeyCache.from_dump(keys)
+    key_cache = KeyCache._from_dump(keys)
     try:
         yield key_cache
     finally:
-        request.config.cache.set("x509-validator/keys", key_cache.dump())
+        request.config.cache.set("x509-validator/keys", key_cache._dump())
 
 
 class CertificatePair(object):
@@ -109,11 +109,11 @@ class CAWorkspace(object):
         self._key_cache = key_cache
         self._roots = []
 
-    def build_validator(self):
+    def _build_validator(self):
         return X509Validator(self._roots)
 
-    def build_validation_context(self, name=x509.DNSName("example.com"),
-                                 extra_certs=[], extended_key_usage=None):
+    def _build_validation_context(self, name=x509.DNSName("example.com"),
+                                  extra_certs=[], extended_key_usage=None):
         if extended_key_usage is None:
             extended_key_usage = ANY_EXTENDED_KEY_USAGE_OID
         return ValidationContext(
@@ -123,15 +123,15 @@ class CAWorkspace(object):
         )
 
     def assert_doesnt_validate(self, cert, **kwargs):
-        validator = self.build_validator()
-        ctx = self.build_validation_context(**kwargs)
+        validator = self._build_validator()
+        ctx = self._build_validation_context(**kwargs)
         with pytest.raises(ValidationError):
             validator.validate(cert.cert, ctx)
 
     def assert_validates(self, cert, expected_chain, **kwargs):
-        validator = self.build_validator()
+        validator = self._build_validator()
         chain = validator.validate(
-            cert.cert, self.build_validation_context(**kwargs)
+            cert.cert, self._build_validation_context(**kwargs)
         )
         assert chain == [c.cert for c in expected_chain]
 
@@ -215,7 +215,7 @@ class CAWorkspace(object):
         self.add_trusted_root(certpair)
         return certpair
 
-    def issue_new_ca_certificate(self, ca, **kwargs):
+    def issue_new_ca(self, ca, **kwargs):
         return self._issue_new_ca(issuer=ca, **kwargs)
 
     def issue_new_leaf(self, ca, **kwargs):
@@ -231,4 +231,4 @@ def ca_workspace(key_cache):
     try:
         yield workspace
     finally:
-        key_cache.reset()
+        key_cache._reset()

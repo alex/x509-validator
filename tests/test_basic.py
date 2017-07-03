@@ -34,7 +34,7 @@ def test_untrusted_issuer(ca_workspace):
 
 def test_intermediate(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
-    intermediate = ca_workspace.issue_new_ca_certificate(root)
+    intermediate = ca_workspace.issue_new_ca(root)
     cert = ca_workspace.issue_new_leaf(intermediate)
 
     ca_workspace.assert_validates(
@@ -67,7 +67,7 @@ def test_ca_true_required(ca_workspace):
 
 def test_pathlen(ca_workspace):
     root = ca_workspace.issue_new_trusted_root(path_length=0)
-    intermediate = ca_workspace.issue_new_ca_certificate(root)
+    intermediate = ca_workspace.issue_new_ca(root)
     direct = ca_workspace.issue_new_leaf(root)
     cert = ca_workspace.issue_new_leaf(intermediate)
 
@@ -76,9 +76,9 @@ def test_pathlen(ca_workspace):
 
     root = ca_workspace.issue_new_trusted_root(path_length=1)
     direct1 = ca_workspace.issue_new_leaf(root)
-    intermediate1 = ca_workspace.issue_new_ca_certificate(root)
+    intermediate1 = ca_workspace.issue_new_ca(root)
     direct2 = ca_workspace.issue_new_leaf(intermediate1)
-    intermediate2 = ca_workspace.issue_new_ca_certificate(intermediate)
+    intermediate2 = ca_workspace.issue_new_ca(intermediate)
     cert = ca_workspace.issue_new_leaf(intermediate2)
 
     ca_workspace.assert_validates(direct1, [direct1, root])
@@ -92,8 +92,8 @@ def test_pathlen(ca_workspace):
 
 def test_conflicting_pathlen(ca_workspace):
     root = ca_workspace.issue_new_trusted_root(path_length=1)
-    intermediate1 = ca_workspace.issue_new_ca_certificate(root, path_length=2)
-    intermediate2 = ca_workspace.issue_new_ca_certificate(intermediate1)
+    intermediate1 = ca_workspace.issue_new_ca(root, path_length=2)
+    intermediate2 = ca_workspace.issue_new_ca(intermediate1)
     leaf = ca_workspace.issue_new_leaf(intermediate2)
 
     ca_workspace.assert_doesnt_validate(
@@ -171,7 +171,7 @@ def test_maximum_chain_depth(ca_workspace):
     intermediates = []
     ca = root
     for _ in range(16):
-        ca = ca_workspace.issue_new_ca_certificate(ca)
+        ca = ca_workspace.issue_new_ca(ca)
         intermediates.append(ca)
     leaf = ca_workspace.issue_new_leaf(ca)
 
@@ -194,7 +194,7 @@ def test_unsupported_critical_extension_leaf(ca_workspace):
 
 def test_unsupported_critical_extension_intermediate(ca_workspace):
     root = ca_workspace.issue_new_trusted_root()
-    intermediate = ca_workspace.issue_new_ca_certificate(
+    intermediate = ca_workspace.issue_new_ca(
         root,
         extra_extensions=[
             create_extension(
@@ -414,7 +414,7 @@ def test_extended_key_usage(ca_workspace):
     )
 
     root = ca_workspace.issue_new_trusted_root()
-    intermediate = ca_workspace.issue_new_ca_certificate(
+    intermediate = ca_workspace.issue_new_ca(
         root, extended_key_usages=[x509.ExtendedKeyUsageOID.CLIENT_AUTH]
     )
     cert = ca_workspace.issue_new_leaf(intermediate)
