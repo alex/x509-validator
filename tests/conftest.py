@@ -80,10 +80,10 @@ class KeyCache(object):
             lambda: ec.generate_private_key(curve, backend=default_backend()),
         )
 
-    def generate_dsa_key(self):
+    def generate_dsa_key(self, key_size=2048):
         return self._generate_key(
-            ("dsa",),
-            lambda: dsa.generate_private_key(2048, backend=default_backend())
+            ("dsa", key_size),
+            lambda: dsa.generate_private_key(key_size, backend=default_backend())
         )
 
     def _reset(self):
