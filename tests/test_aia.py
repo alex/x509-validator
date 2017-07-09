@@ -27,7 +27,6 @@ def test_non_http_aia(ca_workspace):
     ca_workspace.assert_doesnt_validate(cert)
 
 
-
 def test_multiple_aia(ca_workspace, server):
     root = ca_workspace.issue_new_trusted_root()
     intermediate = ca_workspace.issue_new_ca(root)

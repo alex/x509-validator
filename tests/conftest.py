@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import base64
-import binascii
 import datetime
 import hashlib
 import threading
