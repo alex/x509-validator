@@ -4,7 +4,10 @@ import datetime
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
+
+import requests
 
 
 # TODO: https://github.com/pyca/cryptography/issues/3745
@@ -67,6 +70,8 @@ class X509Validator(object):
         self._roots = roots
         self._roots_by_name = _build_name_mapping(roots)
 
+        self._http_session = requests.session()
+
     def validate(self, cert, ctx):
         if not self._is_valid_cert(cert, ctx):
             raise ValidationError
@@ -83,6 +88,40 @@ class X509Validator(object):
             yield issuer
         for issuer in self._roots_by_name.get(cert.issuer, []):
             yield issuer
+        for issuer in self._follow_aia(cert):
+            yield issuer
+
+    def _follow_aia(self, cert):
+        try:
+            aia = cert.extensions.get_extension_for_class(
+                x509.AuthorityInformationAccess
+            ).value
+        except x509.ExtensionNotFound:
+            return
+
+        for loc in aia:
+            am = loc.access_method
+            if (
+                am == x509.AuthorityInformationAccessOID.CA_ISSUERS and
+                isinstance(loc.access_location, x509.UniformResourceIdentifier)
+            ):
+                location = loc.access_location.value
+                if location.startswith("http://"):
+                    # TODO: asyncio, filtering out addresses that shouldn't be
+                    # accessible (e.g. 169.254.169.254), timeouts, disabling
+                    # AIA, ...
+                    try:
+                        response = self._http_session.get(location)
+                    except requests.ConnectionError:
+                        continue
+                    if response.status_code != 200:
+                        continue
+                    try:
+                        yield x509.load_der_x509_certificate(
+                            response.content, default_backend()
+                        )
+                    except ValueError:
+                        pass
 
     def _is_name_correct(self, cert, name):
         if not isinstance(name, x509.DNSName):

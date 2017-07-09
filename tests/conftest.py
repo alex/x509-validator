@@ -1,7 +1,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import base64
+import binascii
 import datetime
+import hashlib
+import threading
 from collections import defaultdict
 
 from cryptography import x509
@@ -11,12 +14,14 @@ from cryptography.hazmat.primitives.asymmetric import dsa, ec, rsa
 
 import pytest
 
+import wsgiref.simple_server
+
 from validator import (
     ANY_EXTENDED_KEY_USAGE_OID, X509Validator, ValidationContext,
     ValidationError
 )
 
-from .utils import create_extension
+from .utils import create_ca_issuer, create_extension
 
 
 class KeyCache(object):
@@ -139,6 +144,7 @@ class CAWorkspace(object):
                         issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
                         extended_key_usages=[ANY_EXTENDED_KEY_USAGE_OID],
+                        ca_issuers=None,
                         extra_extensions=[]):
 
         if key is None:
@@ -184,6 +190,11 @@ class CAWorkspace(object):
         if extended_key_usages is not None:
             builder = builder.add_extension(
                 x509.ExtendedKeyUsage(extended_key_usages),
+                critical=False,
+            )
+        if ca_issuers is not None:
+            builder = builder.add_extension(
+                x509.AuthorityInformationAccess(ca_issuers),
                 critical=False,
             )
         for ext in extra_extensions:
@@ -232,3 +243,53 @@ def ca_workspace(key_cache):
         yield workspace
     finally:
         key_cache._reset()
+
+
+class WSGIApplication(object):
+    def __init__(self):
+        self.urls = {}
+
+    def __call__(self, environ, start_response):
+        try:
+            contents = self.urls[environ["PATH_INFO"]]
+        except KeyError:
+            start_response(b"404 Not Found", [])
+            return []
+        start_response(
+            b"200 OK", [(b"Content-Type", b"application/pkix-cert")]
+        )
+        return [contents]
+
+
+class Server(object):
+    def __init__(self, wsgi_app, server_address):
+        self.wsgi_app = wsgi_app
+        self.server_address = server_address
+
+    @property
+    def base_url(self):
+        (host, port) = self.server_address
+        return "http://{}:{}".format(host, port)
+
+    def create_aia_url(self, cert):
+        if isinstance(cert, CertificatePair):
+            data = cert.cert.public_bytes(serialization.Encoding.DER)
+        else:
+            data = cert
+        url = "/{}.crt".format(hashlib.sha256(data).hexdigest())
+        self.wsgi_app.urls[url] = data
+        return create_ca_issuer("{}{}".format(self.base_url, url))
+
+
+@pytest.fixture
+def server():
+    wsgi_app = WSGIApplication()
+    httpd = wsgiref.simple_server.make_server("localhost", 0, wsgi_app)
+    t = threading.Thread(
+        # The default poll_interval means that shutdown takes half a second
+        target=httpd.serve_forever, kwargs={"poll_interval": 0}
+    )
+    t.start()
+    yield Server(wsgi_app, httpd.server_address)
+    httpd.shutdown()
+    t.join()

@@ -11,3 +11,10 @@ def create_extension(value, critical):
 
 def relative_datetime(td):
     return datetime.datetime.utcnow() + td
+
+
+def create_ca_issuer(url):
+    return x509.AccessDescription(
+        x509.AuthorityInformationAccessOID.CA_ISSUERS,
+        x509.UniformResourceIdentifier(url)
+    )
