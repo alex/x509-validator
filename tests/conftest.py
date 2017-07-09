@@ -83,7 +83,9 @@ class KeyCache(object):
     def generate_dsa_key(self, key_size=2048):
         return self._generate_key(
             ("dsa", key_size),
-            lambda: dsa.generate_private_key(key_size, backend=default_backend())
+            lambda: dsa.generate_private_key(
+                key_size, backend=default_backend()
+            )
         )
 
     def _reset(self):
