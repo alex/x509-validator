@@ -11,7 +11,6 @@
 
 ## Need to write full test case description for
 
-- RSA-PSS signatures
 - CRL
 - SCT
 - OCSP
