@@ -135,9 +135,8 @@ class X509Validator(object):
             return False
 
         for entry in san:
+            # TODO: support other name types
             if not isinstance(entry, x509.DNSName):
-                # TODO: verify that it's not an error to see strange SAN
-                # entries
                 continue
             if _hostname_matches(hostname, entry.value):
                 return True
