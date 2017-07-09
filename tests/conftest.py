@@ -4,6 +4,7 @@ import base64
 import datetime
 import hashlib
 import threading
+import wsgiref.simple_server
 from collections import defaultdict
 
 from cryptography import x509
@@ -12,8 +13,6 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, rsa
 
 import pytest
-
-import wsgiref.simple_server
 
 from validator import (
     ANY_EXTENDED_KEY_USAGE_OID, X509Validator, ValidationContext,
