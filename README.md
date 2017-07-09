@@ -12,7 +12,7 @@ from cryptography import x509
 
 from validator import X509Validator, ValidationContext
 
-validator = X509Validator([list-of-x509-certificates])
+validator = X509Validator([list-of-trusted-x509-certificates])
 validator.validate(
     leaf_certificate
     ValidationContext(
@@ -21,3 +21,11 @@ validator.validate(
         extended_key_usage=x509.ExtendedKeyUsageOIDs.SERVER_AUTH,
     )
 )
+```
+
+Will return the built chain on success, or raise an `x509.ValidationError` on
+failure.
+
+## Work in progress
+
+See `TODO.md` for things that are currently unimplemented.
