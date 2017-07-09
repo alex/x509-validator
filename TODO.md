@@ -5,9 +5,6 @@
 ## Failure
 
 - Signature not correct (currently implicitly tested)
-- SPKI contains random oid
-    - Leaf
-    - intermediate
 
 ## Need to write full test case description for
 
