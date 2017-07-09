@@ -8,9 +8,6 @@
 
 ## Need to write full test case description for
 
-- CRL
-- SCT
-- OCSP
 - ski/aki?
 - issuer/subject matching?
 - key usages
