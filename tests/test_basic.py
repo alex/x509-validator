@@ -254,6 +254,25 @@ def test_name_validation(ca_workspace):
         no_san_cert, name=x509.DNSName("example.com")
     )
 
+    dns_san_cert = ca_workspace.issue_new_leaf(
+        root, names=[x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))]
+    )
+    ca_workspace.assert_doesnt_validate(
+        dns_san_cert, name=x509.DNSName("example.com")
+    )
+
+    many_san_types_cert = ca_workspace.issue_new_leaf(
+        root, names=[
+            x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+            x509.DNSName("example.com"),
+        ]
+    )
+    ca_workspace.assert_validates(
+        many_san_types_cert,
+        [many_san_types_cert, root],
+        name=x509.DNSName("example.com")
+    )
+
 
 @pytest.mark.parametrize(("trusted", "name"), [
     (False, "example.com"),
