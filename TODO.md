@@ -8,10 +8,5 @@
 
 ## Need to write full test case description for
 
-- ski/aki?
 - issuer/subject matching?
-- key usages
-- issuer alt names?
-- maximum validity period
-- policy constraints/certificate policies?
 - ?
