@@ -5,12 +5,13 @@
 - Ed25519
     - Leaf
     - CA
-    - bad signature
-    - invalid signature oid
 
 ## Failure
 
-- Signature not correct
+- Ed25519
+    - bad signature
+    - invalid signature oid
+- Signature not correct (currently implicitly tested)
 - SPKI contains random oid
     - Leaf
     - intermediate
