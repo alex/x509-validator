@@ -18,7 +18,6 @@
 ## Need to write full test case description for
 
 - RSA-PSS signatures
-- AIA chasing
 - CRL
 - SCT
 - OCSP
