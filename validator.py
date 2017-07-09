@@ -235,7 +235,9 @@ class X509Validator(object):
                 )
             except InvalidSignature:
                 return False
-        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+        else:
+            # Always true because of the `_is_valid_public_key` check.
+            assert isinstance(public_key, ec.EllipticCurvePublicKey)
             if cert.signature_algorithm_oid not in [
                 x509.SignatureAlgorithmOID.ECDSA_WITH_SHA256
             ]:
@@ -249,9 +251,6 @@ class X509Validator(object):
                 )
             except InvalidSignature:
                 return False
-        else:
-            # Unreachable because of the `_is_valid_public_key` check.
-            return False
         return True
 
     def _build_chain_from(self, cert, ctx, depth):
@@ -259,7 +258,6 @@ class X509Validator(object):
             return
         if cert in self._roots:
             yield [cert]
-            return
         for issuer in self._find_potential_issuers(cert, ctx):
             if self._is_valid_issuer(cert, issuer, depth, ctx):
                 chains = self._build_chain_from(issuer, ctx, depth=depth+1)
