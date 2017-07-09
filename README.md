@@ -28,4 +28,6 @@ failure.
 
 ## Work in progress
 
-See `TODO.md` for things that are currently unimplemented.
+See the issue tracker for things that are currently known to be unimplemented
+(seek existential assistance for things that are not known to be
+unimplemented).
