@@ -256,7 +256,8 @@ class WSGIApplication(object):
             start_response(str("404 Not Found"), [])
             return []
         start_response(
-            str("200 OK"), [(str("Content-Type"), str("application/pkix-cert"))]
+            str("200 OK"),
+            [(str("Content-Type"), str("application/pkix-cert"))],
         )
         return [contents]
 
