@@ -12,7 +12,8 @@ python:
     - 3.6
 
 install:
-    - pip install pytest coverage requests cryptography
+    - pip install pytest coverage requests cryptography flake8
 
 script:
     - coverage run -m pytest
+    - flake8 validator.py tests/
