@@ -16,4 +16,5 @@ install:
 
 script:
     - coverage run -m pytest
+    - coverage report
     - flake8 validator.py tests/
