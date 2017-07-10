@@ -12,7 +12,7 @@ python:
     - 3.6
 
 install:
-    - pip install pytest requests cryptography
+    - pip install pytest coverage requests cryptography
 
 script:
-    - py.test
+    - coverage run -m pytest
