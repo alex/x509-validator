@@ -1,0 +1,17 @@
+sudo: false
+
+language: python
+cache:
+   - $HOME/.cache/pip/
+
+python:
+    - 2.7
+    - 3.4
+    - 3.5
+    - 3.6
+
+install:
+    - pip install pytest requests cryptography
+
+script:
+    - pytest
