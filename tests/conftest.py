@@ -253,10 +253,10 @@ class WSGIApplication(object):
         try:
             contents = self.urls[environ["PATH_INFO"]]
         except KeyError:
-            start_response(b"404 Not Found", [])
+            start_response(str("404 Not Found"), [])
             return []
         start_response(
-            b"200 OK", [(str("Content-Type"), str("application/pkix-cert"))]
+            str("200 OK"), [(str("Content-Type"), str("application/pkix-cert"))]
         )
         return [contents]
 
