@@ -271,7 +271,6 @@ class X509Validator(object):
 
     def validate(self, cert, ctx):
         loop = asyncio.new_event_loop()
-        loop.set_debug(True)
         return loop.run_until_complete(
             _async_validate(self._roots, cert, ctx, loop)
         )
