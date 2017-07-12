@@ -1,13 +1,14 @@
 from __future__ import absolute_import, division, unicode_literals
 
+import asyncio
 import datetime
+
+import aiohttp
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
-
-import requests
 
 
 # TODO: https://github.com/pyca/cryptography/issues/3745
@@ -65,33 +66,33 @@ _SUPPORTED_EXTENSIONS = {x509.ExtensionOID.BASIC_CONSTRAINTS}
 _SUPPORTED_CURVES = {ec.SECP256R1, ec.SECP384R1}
 
 
-class X509Validator(object):
-    def __init__(self, roots):
+class _AsyncX509Validator(object):
+    def __init__(self, roots, http_client):
         self._roots = roots
         self._roots_by_name = _build_name_mapping(roots)
 
-        self._http_session = requests.session()
+        self._http_client = http_client
 
-    def validate(self, cert, ctx):
+    async def validate(self, cert, ctx):
         if not self._is_valid_cert(cert, ctx):
             raise ValidationError
 
         if not self._is_name_correct(cert, ctx.name):
             raise ValidationError
 
-        for chain in self._build_chain_from(cert, ctx, depth=0):
+        async for chain in self._build_chain_from(cert, ctx, depth=0):
             return chain
         raise ValidationError
 
-    def _find_potential_issuers(self, cert, ctx):
+    async def _find_potential_issuers(self, cert, ctx):
         for issuer in ctx._extra_certs_by_name.get(cert.issuer, []):
             yield issuer
         for issuer in self._roots_by_name.get(cert.issuer, []):
             yield issuer
-        for issuer in self._follow_aia(cert):
+        async for issuer in self._follow_aia(cert):
             yield issuer
 
-    def _follow_aia(self, cert):
+    async def _follow_aia(self, cert):
         try:
             aia = cert.extensions.get_extension_for_class(
                 x509.AuthorityInformationAccess
@@ -107,20 +108,20 @@ class X509Validator(object):
             ):
                 location = loc.access_location.value
                 if location.startswith("http://"):
-                    # TODO: asyncio, filtering out addresses that shouldn't be
+                    # TODO: filtering out addresses that shouldn't be
                     # accessible (e.g. 169.254.169.254), timeouts, disabling
                     # AIA, ...
                     try:
-                        response = self._http_session.get(location)
-                    except requests.ConnectionError:
-                        continue
-                    if response.status_code != 200:
-                        continue
-                    try:
-                        yield x509.load_der_x509_certificate(
-                            response.content, default_backend()
-                        )
-                    except ValueError:
+                        async with self._http_client.get(location) as response:
+                            if response.status != 200:
+                                continue
+                            try:
+                                yield x509.load_der_x509_certificate(
+                                    await response.read(), default_backend()
+                                )
+                            except ValueError:
+                                pass
+                    except aiohttp.ClientConnectorError:
                         pass
 
     def _is_name_correct(self, cert, name):
@@ -252,13 +253,31 @@ class X509Validator(object):
                 return False
         return True
 
-    def _build_chain_from(self, cert, ctx, depth):
+    async def _build_chain_from(self, cert, ctx, depth):
         if depth > _MAX_CHAIN_DEPTH:
             return
         if cert in self._roots:
             yield [cert]
-        for issuer in self._find_potential_issuers(cert, ctx):
+        async for issuer in self._find_potential_issuers(cert, ctx):
             if self._is_valid_issuer(cert, issuer, depth, ctx):
                 chains = self._build_chain_from(issuer, ctx, depth=depth+1)
-                for chain in chains:
+                async for chain in chains:
                     yield [cert] + chain
+
+
+class X509Validator(object):
+    def __init__(self, roots):
+        self._roots = roots
+
+    def validate(self, cert, ctx):
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+        return loop.run_until_complete(
+            _async_validate(self._roots, cert, ctx, loop)
+        )
+
+
+async def _async_validate(roots, cert, ctx, loop):
+    async with aiohttp.ClientSession(loop=loop) as http_client:
+        async_validator = _AsyncX509Validator(roots, http_client)
+        return await async_validator.validate(cert, ctx)
