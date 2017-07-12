@@ -107,7 +107,7 @@ class X509Validator(object):
             ):
                 location = loc.access_location.value
                 if location.startswith("http://"):
-                    # TODO: asyncio, filtering out addresses that shouldn't be
+                    # TODO: filtering out addresses that shouldn't be
                     # accessible (e.g. 169.254.169.254), timeouts, disabling
                     # AIA, ...
                     try:
