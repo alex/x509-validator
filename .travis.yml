@@ -7,13 +7,10 @@ cache:
         - $HOME/.cache/pip/
 
 python:
-    - 2.7
-    - 3.4
-    - 3.5
     - 3.6
 
 install:
-    - pip install pytest coverage requests cryptography flake8
+    - pip install pytest coverage aiohttp cryptography flake8
 
 script:
     - coverage run -m pytest
