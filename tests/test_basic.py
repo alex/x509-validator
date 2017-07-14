@@ -463,3 +463,52 @@ def test_missing_extended_key_usage(ca_workspace):
         cert, [cert, root],
         extended_key_usage=[x509.ExtendedKeyUsageOID.SERVER_AUTH]
     )
+
+
+def test_key_usage_ca(ca_workspace):
+    root = ca_workspace.issue_new_trusted_root(key_usage=None)
+    cert = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_doesnt_validate(cert)
+
+    root = ca_workspace.issue_new_trusted_root(
+        key_usage=x509.KeyUsage(
+            digital_signature=False,
+            content_commitment=False,
+            key_encipherment=False,
+            data_encipherment=False,
+            key_agreement=False,
+            key_cert_sign=False,
+            encipher_only=False,
+            decipher_only=False,
+            crl_sign=True
+        )
+    )
+    cert = ca_workspace.issue_new_leaf(root)
+
+    ca_workspace.assert_doesnt_validate(cert)
+
+    root = ca_workspace.issue_new_trusted_root()
+    intermediate = ca_workspace.issue_new_ca(root, key_usage=None)
+    cert = ca_workspace.issue_new_leaf(intermediate)
+
+    ca_workspace.assert_doesnt_validate(cert, extra_certs=[intermediate])
+
+    root = ca_workspace.issue_new_trusted_root()
+    intermediate = ca_workspace.issue_new_ca(
+        root,
+        key_usage=x509.KeyUsage(
+            digital_signature=False,
+            content_commitment=False,
+            key_encipherment=False,
+            data_encipherment=False,
+            key_agreement=False,
+            key_cert_sign=False,
+            encipher_only=False,
+            decipher_only=False,
+            crl_sign=True
+        )
+    )
+    cert = ca_workspace.issue_new_leaf(intermediate)
+
+    ca_workspace.assert_doesnt_validate(cert, extra_certs=[intermediate])

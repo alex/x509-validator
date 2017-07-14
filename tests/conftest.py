@@ -143,6 +143,7 @@ class CAWorkspace(object):
     def _issue_new_cert(self, key=None, names=[x509.DNSName("example.com")],
                         issuer=None, not_valid_before=None,
                         not_valid_after=None, signature_hash_algorithm=None,
+                        key_usage=None,
                         extended_key_usages=[ANY_EXTENDED_KEY_USAGE_OID],
                         ca_issuers=None,
                         extra_extensions=[]):
@@ -187,6 +188,8 @@ class CAWorkspace(object):
                 x509.SubjectAlternativeName(names),
                 critical=False,
             )
+        if key_usage is not None:
+            builder = builder.add_extension(key_usage, critical=False)
         if extended_key_usages is not None:
             builder = builder.add_extension(
                 x509.ExtendedKeyUsage(extended_key_usages),
@@ -205,6 +208,21 @@ class CAWorkspace(object):
         return CertificatePair(cert, key)
 
     def _issue_new_ca(self, issuer=None, path_length=None, **kwargs):
+        kwargs.setdefault(
+            "key_usage",
+            x509.KeyUsage(
+                key_cert_sign=True,
+
+                digital_signature=False,
+                content_commitment=False,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                encipher_only=False,
+                decipher_only=False,
+                crl_sign=False,
+            )
+        )
         return self._issue_new_cert(
             issuer=issuer,
             extra_extensions=[

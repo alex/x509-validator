@@ -215,6 +215,14 @@ class X509Validator(object):
         ):
             return False
 
+        try:
+            ku = issuer.extensions.get_extension_for_class(x509.KeyUsage).value
+        except x509.ExtensionNotFound:
+            return False
+
+        if not ku.key_cert_sign:
+            return False
+
         if not self._check_name_constraints(issuer, ctx.name):
             return False
 
